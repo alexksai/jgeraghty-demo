@@ -1,11 +1,56 @@
 document.addEventListener('DOMContentLoaded',()=>{
   const logoSrc='assets/GERAGHTY-OFFICIAL-LOGO-WHITE-PNG-scaled.png';
-  document.querySelectorAll('.brand img,.homeNav img').forEach(img=>img.src=logoSrc);
+  document.querySelectorAll('.brand img,.logoImg img').forEach(img=>img.src=logoSrc);
   document.querySelectorAll('a.logo').forEach(a=>{a.innerHTML=`<img src="${logoSrc}" alt="J. Geraghty Utility Services">`;a.classList.add('logoImg')});
+
+  const slug=(location.pathname.split('/').pop()||'index.html').replace('.html','');
+  document.body.dataset.page=slug;
+
+  const heroPhotos={
+    water:'https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/water-1.jpg',
+    gas:'https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/gas-1.jpg',
+    electricity:'https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/electric-1.jpg',
+    bt:'https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.08.47.jpeg',
+    'new-builds':'https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.08.47.jpeg',
+    'grab-wagon-hire':'https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.09.25.jpeg',
+    about:'https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.08.47.jpeg',
+    team:'https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.08.47.jpeg',
+    values:'https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/water-3.jpg',
+    news:'https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.09.25.jpeg',
+    recruitment:'https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.09.25.jpeg',
+    testimonials:'https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/gas-1.jpg',
+    contact:'https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/electric-1.jpg',
+    faq:'https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/water-2.jpg',
+    policies:'https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.08.47.jpeg',
+    privacy:'https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.08.47.jpeg'
+  };
+  const heroNumbers={water:'01',gas:'02',electricity:'03',bt:'04','new-builds':'05','grab-wagon-hire':'06'};
+  const hero=document.querySelector('.hero');
+  if(hero && heroPhotos[slug]){
+    hero.classList.add('cinematicHero');
+    hero.style.setProperty('--hero-image',`url("${heroPhotos[slug]}")`);
+    const wrap=hero.querySelector('.wrap');
+    if(wrap){
+      const originalEy=wrap.querySelector('.ey');
+      if(originalEy && heroNumbers[slug]) originalEy.textContent=`${heroNumbers[slug]} / Utility Services`;
+      if(!wrap.querySelector('.heroActions')){
+        const actions=document.createElement('div');
+        actions.className='heroActions';
+        actions.innerHTML=`<a class="heroPrimary" href="contact.html">GET A QUOTE <span>↗</span></a><a class="heroSecondary" href="#page-content">EXPLORE SERVICE <span>↓</span></a>`;
+        wrap.appendChild(actions);
+      }
+      const index=document.createElement('div');
+      index.className='heroIndex';
+      index.innerHTML=`<span>J. GERAGHTY</span><span>${heroNumbers[slug]||'UK'} / 2026</span>`;
+      hero.appendChild(index);
+    }
+    const next=hero.nextElementSibling;
+    if(next && next.classList.contains('section')) next.id='page-content';
+  }
 
   const nav=document.querySelector('.navin')||document.querySelector('.homeNav .in');
   if(nav){
-    let existing=nav.querySelector('.menu,.hamb');
+    let existing=nav.querySelector('.menu,.hamb,.siteBurger');
     if(existing) existing.remove();
     const btn=document.createElement('button');
     btn.className='siteBurger';btn.type='button';btn.setAttribute('aria-label','Open menu');btn.setAttribute('aria-expanded','false');
