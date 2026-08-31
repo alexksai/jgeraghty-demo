@@ -1,0 +1,50 @@
+name: Build Next site
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: ${{ !contains(github.event.head_commit.message, '[skip next build]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: next-app/package.json
+      - name: Prepare local brand photography
+        run: |
+          mkdir -p next-app/public/images
+          cp assets/GERAGHTY-OFFICIAL-LOGO-WHITE-PNG-scaled.png next-app/public/images/logo.png
+          curl -L --fail --retry 3 -o next-app/public/images/water.jpg https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/water-1.jpg
+          curl -L --fail --retry 3 -o next-app/public/images/gas.jpg https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/gas-1.jpg
+          curl -L --fail --retry 3 -o next-app/public/images/electricity.jpg https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/electric-1.jpg
+          curl -L --fail --retry 3 -o next-app/public/images/home.jpg https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.08.47.jpeg || cp next-app/public/images/water.jpg next-app/public/images/home.jpg
+          curl -L --fail --retry 3 -o next-app/public/images/new-builds.jpg https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.09.25.jpeg || cp next-app/public/images/water.jpg next-app/public/images/new-builds.jpg
+          cp next-app/public/images/new-builds.jpg next-app/public/images/bt.jpg
+          cp next-app/public/images/new-builds.jpg next-app/public/images/grab-wagon.jpg
+      - name: Install and build
+        working-directory: next-app
+        env:
+          NEXT_PUBLIC_BASE_PATH: /jgeraghty-demo
+        run: |
+          npm install
+          npm run build
+      - name: Publish export to branch root
+        run: |
+          find . -maxdepth 1 -type f -name '*.html' -delete
+          cp -a next-app/out/. ./
+          for p in water gas electricity bt new-builds grab-wagon-hire about values news team faq recruitment testimonials policies privacy contact; do
+            printf '<!doctype html><meta http-equiv="refresh" content="0;url=./%s/">' "$p" > "$p.html"
+          done
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m 'Publish Next.js export [skip next build]' || exit 0
+          git push
