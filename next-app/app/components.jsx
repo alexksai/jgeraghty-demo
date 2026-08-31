@@ -4,13 +4,24 @@ import Link from 'next/link';
 import { nav } from './data';
 
 const B = process.env.NEXT_PUBLIC_BASE_PATH || '';
-export const asset = (p) => `${B}${p}`;
+const asset = (p) => `${B}${p}`;
 
 export function Header(){
   const [open,setOpen]=useState(false);
   return <>
-    <header className="siteHeader"><Link className="brand" href="/"><img src={asset('/images/logo.png')} alt="J. Geraghty Utilities"/></Link><nav className="desktopNav">{nav.map(([n,h])=><Link key={h} href={h}>{n}</Link>)}</nav><Link className="quote" href="/contact">Request a callback ↗</Link><button className="burger" onClick={()=>setOpen(true)} aria-label="Open menu"><span/><span/><span/></button></header>
-    <div className={`mobileMenu ${open?'open':''}`}><div className="mobilePanel"><div className="mobileHead"><img src={asset('/images/logo.png')} alt="J. Geraghty Utilities"/><button onClick={()=>setOpen(false)}>×</button></div><nav>{nav.map(([n,h])=><Link key={h} href={h} onClick={()=>setOpen(false)}>{n}</Link>)}<Link href="/about" onClick={()=>setOpen(false)}>About</Link><Link href="/contact" onClick={()=>setOpen(false)}>Contact</Link></nav><Link className="mobileQuote" href="/contact">Request a callback ↗</Link></div></div>
+    <header className="siteHeader">
+      <Link className="brand" href="/" aria-label="J. Geraghty Utilities home"><img src={asset('/images/logo.png')} alt="J. Geraghty Utilities"/></Link>
+      <nav className="desktopNav">{nav.map(([n,h])=><Link key={h} href={h}>{n}</Link>)}</nav>
+      <Link className="quote" href="/contact">Request a callback ↗</Link>
+      <button className="burger" onClick={()=>setOpen(true)} aria-label="Open menu" aria-expanded={open}><span/><span/><span/></button>
+    </header>
+    <div className={`mobileMenu ${open?'open':''}`} onClick={(e)=>{if(e.target===e.currentTarget)setOpen(false)}}>
+      <div className="mobilePanel">
+        <div className="mobileHead"><img src={asset('/images/logo.png')} alt="J. Geraghty Utilities"/><button onClick={()=>setOpen(false)} aria-label="Close menu">×</button></div>
+        <nav>{nav.map(([n,h])=><Link key={h} href={h} onClick={()=>setOpen(false)}>{n}</Link>)}<Link href="/about" onClick={()=>setOpen(false)}>About</Link><Link href="/contact" onClick={()=>setOpen(false)}>Contact</Link></nav>
+        <Link className="mobileQuote" href="/contact" onClick={()=>setOpen(false)}>Request a callback ↗</Link>
+      </div>
+    </div>
   </>;
 }
 
