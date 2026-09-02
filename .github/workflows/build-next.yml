@@ -1,25 +1,38 @@
-name: Build Next site
+name: Build and publish Next site
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: next-root-publish
+  cancel-in-progress: false
+
 jobs:
-  build:
-    if: ${{ !contains(github.event.head_commit.message, '[skip next build]') }}
+  build-and-publish:
+    if: ${{ !contains(github.event.head_commit.message || '', '[skip next build]') }}
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: next-app/package.json
+
       - name: Prepare local brand photography
         run: |
+          set -euo pipefail
           mkdir -p next-app/public/images
           cp assets/GERAGHTY-OFFICIAL-LOGO-WHITE-PNG-scaled.png next-app/public/images/logo.png
           curl -L --fail --retry 3 -o next-app/public/images/water.jpg https://www.jgeraghty.co.uk/wp-content/uploads/2019/01/water-1.jpg
@@ -29,22 +42,66 @@ jobs:
           curl -L --fail --retry 3 -o next-app/public/images/new-builds.jpg https://demo.jgeraghty.co.uk/wp-content/uploads/2026/03/WhatsApp-Image-2026-03-10-at-15.09.25.jpeg || cp next-app/public/images/water.jpg next-app/public/images/new-builds.jpg
           cp next-app/public/images/new-builds.jpg next-app/public/images/bt.jpg
           cp next-app/public/images/new-builds.jpg next-app/public/images/grab-wagon.jpg
-      - name: Install and build
+
+      - name: Install and build Next.js
         working-directory: next-app
         env:
           NEXT_PUBLIC_BASE_PATH: /jgeraghty-demo
         run: |
+          set -euo pipefail
           npm install
           npm run build
-      - name: Publish export to branch root
+          test -f out/index.html
+          test -d out/_next
+
+      - name: Archive original HTML once
         run: |
+          set -euo pipefail
+          if [ ! -f legacy-html/.archived ]; then
+            mkdir -p legacy-html
+            for f in ./*.html; do
+              [ -e "$f" ] || continue
+              cp "$f" legacy-html/"$(basename "$f")"
+            done
+            printf 'Original static HTML archived before Next.js root publish.\n' > legacy-html/.archived
+          fi
+
+      - name: Publish Next export to repository root
+        run: |
+          set -euo pipefail
+
+          # Remove old root HTML and previously exported Next route/assets only.
           find . -maxdepth 1 -type f -name '*.html' -delete
+          rm -rf ./_next
+
+          # Copy the static Next export directly into the branch root.
           cp -a next-app/out/. ./
+
+          # GitHub Pages must not run Jekyll because Next uses the _next directory.
+          touch .nojekyll
+
+          # Compatibility redirects for old .html links.
           for p in water gas electricity bt new-builds grab-wagon-hire about values news team faq recruitment testimonials policies privacy contact; do
-            printf '<!doctype html><meta http-equiv="refresh" content="0;url=./%s/">' "$p" > "$p.html"
+            if [ -d "$p" ]; then
+              printf '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./%s/"><link rel="canonical" href="./%s/"></head><body></body></html>\n' "$p" "$p" > "$p.html"
+            fi
           done
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+          test -f index.html
+          test -d _next
+
+      - name: Commit published root
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -f index.html .nojekyll _next legacy-html || true
           git add -A
-          git commit -m 'Publish Next.js export [skip next build]' || exit 0
-          git push
+
+          if git diff --cached --quiet; then
+            echo 'No publish changes to commit.'
+            exit 0
+          fi
+
+          git commit -m 'Publish Next.js export to root [skip next build]'
+          git push origin HEAD:main
