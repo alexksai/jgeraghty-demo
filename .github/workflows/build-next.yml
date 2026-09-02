@@ -69,18 +69,11 @@ jobs:
       - name: Publish Next export to repository root
         run: |
           set -euo pipefail
-
-          # Remove old root HTML and previously exported Next route/assets only.
           find . -maxdepth 1 -type f -name '*.html' -delete
-          rm -rf ./_next
-
-          # Copy the static Next export directly into the branch root.
+          rm -rf ./_next ./images
           cp -a next-app/out/. ./
-
-          # GitHub Pages must not run Jekyll because Next uses the _next directory.
           touch .nojekyll
 
-          # Compatibility redirects for old .html links.
           for p in water gas electricity bt new-builds grab-wagon-hire about values news team faq recruitment testimonials policies privacy contact; do
             if [ -d "$p" ]; then
               printf '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./%s/"><link rel="canonical" href="./%s/"></head><body></body></html>\n' "$p" "$p" > "$p.html"
@@ -95,8 +88,16 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A -f index.html .nojekyll _next legacy-html || true
-          git add -A
+
+          # Stage ONLY the static export and archived legacy pages, never node_modules/.next/out.
+          git add -f .nojekyll index.html 404.html _next images legacy-html 2>/dev/null || true
+          for p in water gas electricity bt new-builds grab-wagon-hire about values news team faq recruitment testimonials policies privacy contact; do
+            [ -e "$p" ] && git add -f "$p"
+            [ -e "$p.html" ] && git add -f "$p.html"
+          done
+
+          # Record removals/replacements of tracked root HTML without touching next-app build artifacts.
+          git add -u -- '*.html' ':!next-app/**' ':!legacy-html/**' || true
 
           if git diff --cached --quiet; then
             echo 'No publish changes to commit.'
